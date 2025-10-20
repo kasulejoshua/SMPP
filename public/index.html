@@ -1,0 +1,151 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>SMPP Web Client</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        :root {
+            --bg: #0b1220;
+            --card: #101828;
+            --text: #e5e7eb;
+            --muted: #94a3b8;
+            --accent: #22d3ee;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: system-ui, Segoe UI, Roboto, Arial;
+            margin: 0;
+        }
+
+        .wrap {
+            max-width: 980px;
+            margin: 40px auto;
+            padding: 0 16px;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        p {
+            color: var(--muted);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 24px;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 14px;
+            padding: 18px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
+        }
+
+        label {
+            display: block;
+            margin: 10px 0 6px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        textarea,
+        input[type="file"] {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: var(--text);
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        button {
+            background: var(--accent);
+            color: #062329;
+            border: 0;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .hint {
+            font-size: 12px;
+            color: #a3a3a3;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <h1>📨 SMPP Web Client</h1>
+        <p>Send a single SMS or upload a CSV/Excel with columns <code>name, number, message</code>. <a
+                href="/template.csv">Download template</a></p>
+
+        <div class="grid">
+            <div class="card">
+                <h3>Send single message</h3>
+                <form method="POST" action="/send-one">
+                    <label>Name (optional)</label>
+                    <input type="text" name="name" />
+
+                    <label>Number (e.g. 2567XXXXXXXX)</label>
+                    <input type="text" name="number" required />
+
+                    <label>Message (you can use {name})</label>
+                    <textarea name="message" maxlength="1000" required></textarea>
+
+                    <label style="margin-top:10px;">
+                        <input type="checkbox" name="personalize" value="1" />
+                        Personalize with name (prefix “Hullo {name}, ” if no {name} in message)
+                    </label>
+
+                    <div style="margin-top:12px"><button type="submit">Send SMS</button></div>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>Bulk upload</h3>
+                <!-- BULK UPLOAD -->
+                <form method="POST" action="/upload" enctype="multipart/form-data">
+                    <label>CSV or Excel file</label>
+                    <input type="file" name="file" accept=".csv,.xls,.xlsx" required />
+                    <p class="hint">
+                        Header row required: <strong>name, number, message</strong>.<br>
+                        You can put <code>{name}</code> inside each row’s message to personalize.
+                    </p>
+
+                    <label style="margin-top:10px;">
+                        <input type="checkbox" name="personalize" value="1" />
+                        Personalize with name (prefix “Hullo {name}, ” if no {name} in row message)
+                    </label>
+
+                    <div style="margin-top:12px"><button type="submit">Upload & Send</button></div>
+                </form>
+            </div>
+        </div>
+
+        <p style="margin-top: 18px;"><a href="/health" target="_blank">Health</a></p>
+    </div>
+</body>
+
+</html>

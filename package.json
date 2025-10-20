@@ -1,0 +1,20 @@
+{
+    "name": "smpp-web-client",
+    "version": "1.0.0",
+    "type": "module",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "NODE_ENV=development node server.js"
+    },
+    "dependencies": {
+        "csv-parse": "^5.5.6",
+        "dotenv": "^16.4.5",
+        "express": "^4.19.2",
+        "mime-types": "^2.1.35",
+        "morgan": "^1.10.0",
+        "multer": "^1.4.5-lts.1",
+        "smpp": "0.6.0-rc.4",
+        "xlsx": "^0.18.5"
+    }
+}
