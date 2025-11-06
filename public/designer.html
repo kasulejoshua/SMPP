@@ -1,0 +1,424 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Bulk Designer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        :root {
+            --b: #111827;
+            --t: #374151;
+            --m: #2563eb;
+            --g: #14a10f;
+            --bd: #e5e7eb;
+        }
+
+        body {
+            font-family: system-ui, Segoe UI, Roboto, Arial;
+            margin: 24px;
+            color: var(--b);
+        }
+
+        h1 {
+            margin: 0 0 16px;
+            font-size: 22px;
+        }
+
+        .card {
+            border: 1px solid var(--bd);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .row {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        label {
+            font-weight: 600;
+        }
+
+        select,
+        textarea,
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--bd);
+            border-radius: 8px;
+        }
+
+        textarea {
+            min-height: 120px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th,
+        td {
+            border: 1px solid var(--bd);
+            padding: 6px;
+            text-align: left;
+        }
+
+        th {
+            background: #f9fafb;
+        }
+
+        .btn {
+            background: var(--m);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 14px;
+            cursor: pointer;
+        }
+
+        .btn:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #111827;
+        }
+
+        .pill {
+            font-size: 12px;
+            border: 1px solid var(--bd);
+            border-radius: 999px;
+            padding: 4px 8px;
+            cursor: pointer;
+        }
+
+        .pill:hover {
+            background: #f3f4f6;
+        }
+
+        .muted {
+            color: var(--t);
+        }
+
+        .ok {
+            background: #e7fbe7;
+            padding: 2px 6px;
+            border-radius: 6px;
+        }
+
+        .fail {
+            background: #fdeaea;
+            padding: 2px 6px;
+            border-radius: 6px;
+        }
+
+        .insertBox {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Bulk Message Designer</h1>
+
+    <div class="card">
+        <form id="uploadForm">
+            <div class="row">
+                <div>
+                    <label>Upload .csv / .xlsx</label>
+                    <input type="file" name="file" accept=".csv,.xlsx" required />
+                </div>
+                <div style="align-self:flex-end;">
+                    <button class="btn" type="submit">Upload & Parse</button>
+                    <a class="btn btn-secondary" href="/">Home</a>
+                </div>
+            </div>
+            <p class="muted" style="margin-top:8px">Tip: Include headers like <b>Name</b>, <b>Number</b>, plus any other
+                fields you want to reference (e.g. <i>balance, due_date</i>).</p>
+        </form>
+        <div id="parseStatus" class="muted" style="margin-top:8px"></div>
+    </div>
+
+    <div id="designer" style="display:none">
+        <div class="card">
+            <div class="row">
+                <div style="min-width:220px;flex:1">
+                    <label>Number column</label>
+                    <select id="numberCol"></select>
+                </div>
+                <div style="min-width:220px;flex:1">
+                    <label>Name column (optional)</label>
+                    <select id="nameCol"></select>
+                </div>
+            </div>
+
+            <div style="margin-top:14px">
+                <label>Message template</label>
+                <textarea id="template"
+                    placeholder="e.g., Hullo {{name}}, your balance is {{balance}} due on {{due_date}}."></textarea>
+            </div>
+
+            <div style="margin-top:10px">
+                <div class="muted" style="margin-bottom:6px">Click a field to insert its token into the message:</div>
+                <div id="insertTokens" class="insertBox"></div>
+            </div>
+
+            <div style="margin-top:10px">
+                <label>Attach extra fields at the end (key:value each line)</label>
+                <div id="attachBox" class="insertBox"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="row" style="justify-content:space-between;">
+                <div class="muted">
+                    Select who should receive:
+                </div>
+                <div>
+                    <button id="selectAllBtn" class="pill" type="button">Select All</button>
+                    <button id="unselectAllBtn" class="pill" type="button">Unselect All</button>
+                    <button id="previewBtn" class="pill" type="button">Refresh Preview</button>
+                </div>
+            </div>
+
+            <div style="max-height:420px; overflow:auto; margin-top:8px">
+                <table id="previewTable">
+                    <thead>
+                        <tr>
+                            <th>Send</th>
+                            <th>#</th>
+                            <th>Number</th>
+                            <th>Name</th>
+                            <th>Preview (first 25 rows only)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div style="margin-top:12px">
+                <button id="sendBtn" class="btn">Send Selected</button>
+                <span id="sendStatus" class="muted" style="margin-left:12px"></span>
+            </div>
+        </div>
+
+        <div id="report" class="card" style="display:none">
+            <h3 style="margin:0 0 8px">Delivery Report</h3>
+            <div id="reportSummary" class="muted" style="margin-bottom:8px"></div>
+            <div style="max-height:420px; overflow:auto">
+                <table id="reportTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Number</th>
+                            <th>Status</th>
+                            <th>Message ID / Error</th>
+                            <th>Text</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let uploadId = null;
+        let columns = [];
+        let sample = [];
+        let rowCount = 0;
+
+        const byId = (id) => document.getElementById(id);
+
+        function optify(sel, items, withEmpty = false) {
+            sel.innerHTML = '';
+            if (withEmpty) sel.appendChild(new Option('— none —', ''));
+            for (const it of items) {
+                sel.appendChild(new Option(it.label, it.key));
+            }
+        }
+
+        function insertAtCursor(el, text) {
+            const start = el.selectionStart ?? el.value.length;
+            const end = el.selectionEnd ?? el.value.length;
+            el.value = el.value.slice(0, start) + text + el.value.slice(end);
+            el.focus();
+            el.selectionStart = el.selectionEnd = start + text.length;
+        }
+
+        function buildTokenPills(container, cols, onClick) {
+            container.innerHTML = '';
+            for (const c of cols) {
+                const pill = document.createElement('button');
+                pill.type = 'button';
+                pill.className = 'pill';
+                pill.textContent = c.label;
+                pill.title = `Insert {{${c.key}}}`;
+                pill.onclick = () => onClick(c);
+                container.appendChild(pill);
+            }
+        }
+
+        function renderPreview() {
+            const tbody = byId('previewTable').querySelector('tbody');
+            tbody.innerHTML = '';
+            const numberCol = byId('numberCol').value;
+            const nameCol = byId('nameCol').value || null;
+            const tpl = byId('template').value;
+            const attach = [...document.querySelectorAll('input[name="attachField"]:checked')].map(i => i.value);
+
+            function applyTemplate(row) {
+                let out = String(tpl || '');
+                out = out.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, k) => {
+                    const kk = k.toLowerCase();
+                    return row[kk] ?? '';
+                });
+                if (nameCol && tpl.includes('{{name}}') && row[nameCol] != null) {
+                    out = out.replace(/\{\{\s*name\s*\}\}/gi, String(row[nameCol]));
+                }
+                if (attach.length) {
+                    const extras = attach
+                        .filter(k => row[k] !== undefined && row[k] !== '')
+                        .map(k => `${k.replace(/_/g, ' ')}: ${row[k]}`);
+                    if (extras.length) out += '\n' + extras.join('\n');
+                }
+                return out;
+            }
+
+            for (const r of sample) {
+                const idx = r.idx;
+                const row = r.row;
+                const tr = document.createElement('tr');
+                const checked = true;
+
+                tr.innerHTML = `
+      <td><input type="checkbox" class="rowCheck" data-idx="${idx}" ${checked ? 'checked' : ''}></td>
+      <td>${idx + 1}</td>
+      <td>${row[numberCol] ?? ''}</td>
+      <td>${nameCol ? (row[nameCol] ?? '') : ''}</td>
+      <td>${applyTemplate(row).replace(/</g, '&lt;')}</td>
+    `;
+                tbody.appendChild(tr);
+            }
+        }
+
+        byId('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            byId('parseStatus').textContent = 'Parsing…';
+            const fd = new FormData(e.target);
+            const res = await fetch('/design-parse', { method: 'POST', body: fd });
+            const data = await res.json();
+
+            if (!res.ok) {
+                byId('parseStatus').textContent = 'Error: ' + (data.error || 'failed');
+                return;
+            }
+
+            uploadId = data.uploadId;
+            columns = data.columns;
+            sample = data.sample;
+            rowCount = data.rowCount;
+
+            byId('parseStatus').textContent = `Loaded ${rowCount} row(s). Showing first 25 for preview.`;
+            byId('designer').style.display = '';
+
+            optify(byId('numberCol'), columns);
+            optify(byId('nameCol'), columns, true);
+
+            buildTokenPills(byId('insertTokens'), columns, (c) => {
+                insertAtCursor(byId('template'), `{{${c.key}}}`);
+            });
+
+            // attach fields checkboxes
+            const attachBox = byId('attachBox');
+            attachBox.innerHTML = '';
+            for (const c of columns) {
+                const id = 'attach_' + c.key;
+                const lbl = document.createElement('label');
+                lbl.style.marginRight = '10px';
+                lbl.innerHTML = `<input type="checkbox" name="attachField" id="${id}" value="${c.key}"> ${c.label}`;
+                attachBox.appendChild(lbl);
+            }
+
+            renderPreview();
+        });
+
+        byId('numberCol').addEventListener('change', renderPreview);
+        byId('nameCol').addEventListener('change', renderPreview);
+        byId('template').addEventListener('input', renderPreview);
+        byId('previewBtn').addEventListener('click', renderPreview);
+
+        byId('selectAllBtn').onclick = () => {
+            document.querySelectorAll('.rowCheck').forEach(cb => cb.checked = true);
+        };
+        byId('unselectAllBtn').onclick = () => {
+            document.querySelectorAll('.rowCheck').forEach(cb => cb.checked = false);
+        };
+
+        byId('sendBtn').addEventListener('click', async () => {
+            const numberCol = byId('numberCol').value;
+            const nameCol = byId('nameCol').value || null;
+            const messageTemplate = byId('template').value;
+
+            if (!uploadId) return alert('No upload. Please upload your file first.');
+            if (!numberCol) return alert('Please select the Number column.');
+            if (!messageTemplate.trim()) return alert('Please enter a message template.');
+
+            const attachFields = [...document.querySelectorAll('input[name="attachField"]:checked')].map(i => i.value);
+
+            // gather selected indexes (from preview; if none checked here we still send ALL on server)
+            const selectedIdxs = [...document.querySelectorAll('.rowCheck:checked')].map(cb => parseInt(cb.dataset.idx, 10));
+
+            byId('sendBtn').disabled = true;
+            byId('sendStatus').textContent = 'Sending…';
+
+            const res = await fetch('/design-send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    uploadId,
+                    numberCol,
+                    nameCol,
+                    messageTemplate,
+                    selectedIdxs,
+                    attachFields
+                })
+            });
+            const data = await res.json();
+
+            byId('sendBtn').disabled = false;
+            if (!res.ok) {
+                byId('sendStatus').textContent = 'Error: ' + (data.error || 'failed');
+                return;
+            }
+
+            byId('sendStatus').textContent = `Done: OK ${data.ok}, Failed ${data.fail}, Total ${data.total}`;
+            const tbody = byId('reportTable').querySelector('tbody');
+            tbody.innerHTML = '';
+            for (const r of data.results) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+      <td>${(r.idx ?? 0) + 1}</td>
+      <td>${r.number ?? ''}</td>
+      <td>${r.status === 'sent' ? '<span class="ok">sent</span>' : '<span class="fail">error</span>'}</td>
+      <td>${(r.message_id || r.detail || '').replace(/</g, '&lt;')}</td>
+      <td>${(r.text || '').replace(/</g, '&lt;')}</td>
+    `;
+                tbody.appendChild(tr);
+            }
+            byId('reportSummary').textContent = `✅ OK: ${data.ok}   ❌ Failed: ${data.fail}   Total: ${data.total}`;
+            byId('report').style.display = '';
+        });
+    </script>
+</body>
+
+</html>
